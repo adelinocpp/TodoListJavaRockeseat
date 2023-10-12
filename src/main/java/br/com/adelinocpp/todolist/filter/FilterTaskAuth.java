@@ -64,50 +64,44 @@ public class FilterTaskAuth implements Filter{
 @Component
 public class FilterTaskAuth extends OncePerRequestFilter{
 
+    
     @Autowired
     private IUserRepository userRepository;
     
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
      throws ServletException, IOException {
-        // pega a requisicao
-        String authorization = request.getHeader("Authorization");
-        if (authorization != null){
-            var authEncoded = authorization.substring("Basic".length()).trim();
-            byte[] authDecoded = Base64.getDecoder().decode(authEncoded);
-            var authString = new String(authDecoded);
-            String[] credentials = authString.split(":");          
-            var userName = credentials[0];
-            var passWord = credentials[1];
-            System.out.println("Authorization");
-            System.out.println(userName);
-            System.out.println(passWord);
-            System.out.println("Chegou no filtro");
-            
-            
-            var user = this.userRepository.findByUsername(userName);
-            System.out.println("User");
-            System.out.println(user);
-            if (user == null){
-                response.sendError(401, "Usuário sem autorização.");
-                return;
-            }
-            else{
-                var passwordVerify = BCrypt.verifyer().verify(passWord.toCharArray(),user.getPassword());
-                //var passwordHashed = BCrypt.withDefaults().hashToString(12, passWord.toCharArray());
-                if (passwordVerify.verified){
-                    filterChain.doFilter(request,response);
-                    return;
+
+        var servletPath = request.getServletPath();
+        if (servletPath.startsWith("/tasks/"))
+        {
+            String authorization = request.getHeader("Authorization");
+            if (authorization != null){
+                var authEncoded = authorization.substring("Basic".length()).trim();
+                byte[] authDecoded = Base64.getDecoder().decode(authEncoded);
+                var authString = new String(authDecoded);
+                String[] credentials = authString.split(":");          
+                var userName = credentials[0];
+                var passWord = credentials[1];
+                var user = this.userRepository.findByUsername(userName);
+                if (user == null){
+                    response.sendError(401, "Usuário sem autorização.");
+               
                 }
                 else{
-                    response.sendError(401, "Usuário sem autorização.");
-                    return;
+                    var passwordVerify = BCrypt.verifyer().verify(passWord.toCharArray(),user.getPassword());
+                    if (passwordVerify.verified){
+                        request.setAttribute("idUser", user.getId());
+                        filterChain.doFilter(request,response);
+                    }
+                    else{
+                        response.sendError(401, "Usuário sem autorização.");
+                    }
                 }
-                
             }
+        }else{
+            filterChain.doFilter(request,response);
         }
-        
-        filterChain.doFilter(request,response);
         //throw new UnsupportedOperationException("Unimplemented method 'doFilterInternal'");
     }
     
