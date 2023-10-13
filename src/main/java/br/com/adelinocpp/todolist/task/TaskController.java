@@ -56,9 +56,11 @@ public class TaskController {
         if (task == null)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("A tarefa que deseja atualizar não foi encontrada.");
         else{
+            var idUser = (UUID)request.getAttribute("idUser");
+            if (!task.getIdUser().equals(idUser)){
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("O usuário não ter permissão para alterar esta tarefa.");
+            }
             Utils.copyNonNullProprieties(taskModel,task);
-            //taskModel.setIdUser(idUser);
-            //taskModel.setId(id);
             var taskReturn = this.taskRepository.save(task);
             return ResponseEntity.status(HttpStatus.OK).body(taskReturn);
         }
